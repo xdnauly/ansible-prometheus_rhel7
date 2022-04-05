@@ -1,0 +1,58 @@
+- name: Upload file
+  ansible.builtin.copy:
+    src: files/prometheus-{{ version }}.linux-{{ arch }}.tar.gz
+    dest: /tmp
+    remote_src: false
+
+- name: Extract archive
+  ansible.builtin.unarchive:
+    creates: "{{ installation_directory }}/prometheus-{{ version }}.linux-{{ arch }}"
+    src: /tmp/prometheus-{{ version }}.linux-{{ arch }}.tar.gz
+    dest: "{{ installation_directory }}"
+    remote_src: true
+
+- name: Create datadir
+  ansible.builtin.file:
+    path: "{{ data_directory }}"
+    state: directory
+
+- name: Remove file prometheus-{{ version }}.linux-{{ arch }}.tar.gz
+  ansible.builtin.file:
+    path: /tmp/prometheus-{{ version }}.linux-{{ arch }}.tar.gz
+    state: absent
+
+- name: Add group "prometheus"
+  ansible.builtin.group:
+    name: prometheus
+
+- name: Add user "prometheus"
+  user:
+    name: prometheus
+    group: prometheus
+    create_home: false
+
+- name: Change ownership of "prometheus"
+  ansible.builtin.file:
+    path: "{{ item  }}"
+    owner: prometheus
+    group: prometheus
+    state: directory
+    recurse: true
+  with_items:
+    - "{{ installation_directory }}/prometheus-{{ version }}.linux-{{ arch }}"
+    - "{{ data_directory }}"
+
+- name: Copy service file
+  ansible.builtin.template:
+    src: prometheus.service
+    dest: /etc/systemd/system
+
+- name: Systemctl daemon-reload
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart prometheus
+  ansible.builtin.service:
+    name: prometheus
+    state: restarted
+    enabled: true

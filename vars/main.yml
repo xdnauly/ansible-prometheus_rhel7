@@ -1,0 +1,6 @@
+---
+# vars file for prometheus
+version:  2.22.0
+arch: amd64
+installation_directory: /usr/local/share
+data_directory: /var/lib/prometheus
